@@ -181,29 +181,26 @@ class ConfigValueButton extends StatelessWidget {
     required this.value,
     required this.accentColor,
     required this.onTap,
+    this.showBottomPadding = true,
   });
 
   final String label;
   final String value;
   final Color accentColor;
   final VoidCallback onTap;
+  final bool showBottomPadding;
 
   @override
   Widget build(BuildContext context) {
     final secondary = AppColors.resolve(AppColors.textSecondary, context);
-    final surface = AppColors.resolve(AppColors.surface, context);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.only(bottom: showBottomPadding ? 8 : 0),
       child: GestureDetector(
         onTap: onTap,
-        child: Container(
-          width: double.infinity,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: surface,
-            borderRadius: BorderRadius.circular(12),
-          ),
           child: Row(
             children: [
               Text(
@@ -211,7 +208,7 @@ class ConfigValueButton extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  letterSpacing: 1.0,
+                  letterSpacing: 0.4,
                   color: secondary,
                   decoration: TextDecoration.none,
                 ),
@@ -236,6 +233,46 @@ class ConfigValueButton extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Groups config rows into one surface so modes like EMOM stay visually united.
+class ConfigGroup extends StatelessWidget {
+  const ConfigGroup({
+    super.key,
+    required this.children,
+  });
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    if (children.isEmpty) return const SizedBox.shrink();
+    final surface = AppColors.resolve(AppColors.surface, context);
+    final separator = AppColors.resolve(AppColors.separator, context);
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0)
+              Container(
+                height: 0.5,
+                margin: const EdgeInsets.symmetric(horizontal: 14),
+                color: separator.withValues(alpha: 0.55),
+              ),
+            children[i],
+          ],
+        ],
       ),
     );
   }

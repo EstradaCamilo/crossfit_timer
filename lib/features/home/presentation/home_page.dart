@@ -258,52 +258,50 @@ class _HomePageState extends State<HomePage> {
                                   : null,
                             ),
                             const SizedBox(height: 28),
-                            // Fixed config block — Visibility keeps size so
-                            // mode switches / running state don't jump.
+                            // Fixed-height slot; rows are grouped so EMOM /
+                            // Tabata fields stay visually united (no gaps).
                             SizedBox(
                               height: 168,
-                              child: IgnorePointer(
-                                ignoring: !showConfig,
-                                child: AnimatedOpacity(
-                                  duration: const Duration(milliseconds: 180),
-                                  opacity: showConfig ? 1 : 0,
-                                  child: Column(
-                                    children: [
-                                      ConfigValueButton(
-                                        label: _primaryLabel(),
-                                        value: formatClock(_minutes, _seconds),
-                                        accentColor: accent,
-                                        onTap: _editPrimaryDuration,
-                                      ),
-                                      Visibility(
-                                        visible:
-                                            _timer.type == TimerType.tabata,
-                                        maintainSize: true,
-                                        maintainAnimation: true,
-                                        maintainState: true,
-                                        child: ConfigValueButton(
-                                          label: s.rest,
+                              child: Align(
+                                alignment: Alignment.topCenter,
+                                child: IgnorePointer(
+                                  ignoring: !showConfig,
+                                  child: AnimatedOpacity(
+                                    duration: const Duration(milliseconds: 180),
+                                    opacity: showConfig ? 1 : 0,
+                                    child: ConfigGroup(
+                                      children: [
+                                        ConfigValueButton(
+                                          label: _primaryLabel(),
                                           value: formatClock(
-                                            _restMinutes,
-                                            _restSeconds,
+                                            _minutes,
+                                            _seconds,
                                           ),
                                           accentColor: accent,
-                                          onTap: _editRestDuration,
+                                          onTap: _editPrimaryDuration,
+                                          showBottomPadding: false,
                                         ),
-                                      ),
-                                      Visibility(
-                                        visible: _timer.config.usesRounds,
-                                        maintainSize: true,
-                                        maintainAnimation: true,
-                                        maintainState: true,
-                                        child: ConfigValueButton(
-                                          label: s.rounds,
-                                          value: '$_rounds',
-                                          accentColor: accent,
-                                          onTap: _editRounds,
-                                        ),
-                                      ),
-                                    ],
+                                        if (_timer.type == TimerType.tabata)
+                                          ConfigValueButton(
+                                            label: s.rest,
+                                            value: formatClock(
+                                              _restMinutes,
+                                              _restSeconds,
+                                            ),
+                                            accentColor: accent,
+                                            onTap: _editRestDuration,
+                                            showBottomPadding: false,
+                                          ),
+                                        if (_timer.config.usesRounds)
+                                          ConfigValueButton(
+                                            label: s.rounds,
+                                            value: '$_rounds',
+                                            accentColor: accent,
+                                            onTap: _editRounds,
+                                            showBottomPadding: false,
+                                          ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
