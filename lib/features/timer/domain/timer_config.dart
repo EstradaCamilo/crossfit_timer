@@ -12,7 +12,7 @@ class TimerConfig {
   /// Workout mode.
   final TimerType type;
 
-  /// Countdown/AMRAP/For Time total, EMOM interval, or Tabata work length.
+  /// AMRAP/For Time total, EMOM interval, or Tabata work length.
   final Duration duration;
 
   /// Tabata (and later Intervals) rest length.
@@ -43,10 +43,10 @@ class TimerConfig {
   /// Sensible defaults when switching modes.
   static TimerConfig defaultsFor(TimerType type) {
     switch (type) {
-      case TimerType.countdown:
+      case TimerType.forTime:
         return const TimerConfig(
-          type: TimerType.countdown,
-          duration: Duration(minutes: 5),
+          type: TimerType.forTime,
+          duration: Duration(minutes: 20),
         );
       case TimerType.amrap:
         return const TimerConfig(
@@ -58,11 +58,6 @@ class TimerConfig {
           type: TimerType.emom,
           duration: Duration(minutes: 1),
           rounds: 10,
-        );
-      case TimerType.forTime:
-        return const TimerConfig(
-          type: TimerType.forTime,
-          duration: Duration(minutes: 20),
         );
       case TimerType.tabata:
         return const TimerConfig(

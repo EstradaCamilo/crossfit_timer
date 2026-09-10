@@ -65,6 +65,7 @@ class _HomePageState extends State<HomePage> {
       case TimerStatus.idle:
       case TimerStatus.completed:
         _timer.start();
+      case TimerStatus.getReady:
       case TimerStatus.running:
         _timer.pause();
       case TimerStatus.paused:
@@ -80,8 +81,13 @@ class _HomePageState extends State<HomePage> {
           return _s.roundsCount(_rounds);
         }
         return null;
+      case TimerStatus.getReady:
+        return _s.getReady;
       case TimerStatus.running:
       case TimerStatus.paused:
+        if (_timer.isInPrep && _timer.status == TimerStatus.paused) {
+          return '${_s.getReady} · ${_s.paused}';
+        }
         if (type == TimerType.emom) {
           final base = _s.roundOf(_timer.currentRound, _timer.totalRounds);
           if (_timer.status == TimerStatus.paused) {
@@ -140,7 +146,6 @@ class _HomePageState extends State<HomePage> {
         return _s.timeCap;
       case TimerType.tabata:
         return _s.work;
-      case TimerType.countdown:
       case TimerType.intervals:
         return _s.duration;
     }
@@ -209,7 +214,7 @@ class _HomePageState extends State<HomePage> {
         final bg = AppColors.resolve(AppColors.background, context);
         final ringAccent = _timer.type == TimerType.tabata &&
                 _timer.phase == TimerPhase.rest &&
-                !_timer.isIdle
+                _timer.isRunning
             ? AppColors.warning
             : accent;
 
@@ -248,6 +253,9 @@ class _HomePageState extends State<HomePage> {
                               accentColor: ringAccent,
                               progress: _displayProgress(),
                               subtitle: _subtitle(),
+                              prepSeconds: _timer.isGetReady
+                                  ? _timer.prepSeconds
+                                  : null,
                             ),
                             if (showConfig) ...[
                               const SizedBox(height: 28),

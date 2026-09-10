@@ -10,9 +10,9 @@ void main() {
     expect(find.text('CrossFit Timer'), findsOneWidget);
     expect(find.text('_camiloestrada'), findsOneWidget);
     expect(find.text('Iniciar'), findsOneWidget);
-    expect(find.text('For Time'), findsOneWidget);
+    expect(find.text('FOR TIME'), findsOneWidget);
     expect(find.text('AMRAP'), findsOneWidget);
     expect(find.text('EMOM'), findsOneWidget);
-    expect(find.text('Tabata'), findsOneWidget);
+    expect(find.text('TABATA'), findsOneWidget);
   });
 }

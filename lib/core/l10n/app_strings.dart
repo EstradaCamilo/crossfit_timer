@@ -46,6 +46,7 @@ class AppStrings {
   String get round => isSpanish ? 'Ronda' : 'Round';
   String get paused => isSpanish ? 'Pausado' : 'Paused';
   String get complete => isSpanish ? 'Completado' : 'Complete';
+  String get getReady => isSpanish ? 'Prepárate' : 'Get ready';
   String get min => isSpanish ? 'min' : 'min';
   String get sec => isSpanish ? 'seg' : 'sec';
 

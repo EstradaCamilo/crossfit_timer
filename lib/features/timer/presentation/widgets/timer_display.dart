@@ -13,6 +13,7 @@ class CrossFitTimerDisplay extends StatelessWidget {
     required this.progress,
     this.typeLabel,
     this.subtitle,
+    this.prepSeconds,
   });
 
   final Duration remaining;
@@ -23,6 +24,9 @@ class CrossFitTimerDisplay extends StatelessWidget {
   final double progress;
   final String? typeLabel;
   final String? subtitle;
+
+  /// When set (get-ready), shows a big digit instead of mm:ss.
+  final int? prepSeconds;
 
   static String format(Duration d) {
     final total = d.inSeconds.clamp(0, 359999);
@@ -37,25 +41,27 @@ class CrossFitTimerDisplay extends StatelessWidget {
     final isDark = brightness == Brightness.dark;
     switch (status) {
       case TimerStatus.idle:
-        return isDark ? CupertinoColors.white : CupertinoColors.black;
       case TimerStatus.running:
+        return isDark ? CupertinoColors.white : CupertinoColors.black;
+      case TimerStatus.getReady:
         return accentColor;
       case TimerStatus.paused:
         return isDark
             ? const Color(0xFF8E8E93)
             : const Color(0xFF636366);
       case TimerStatus.completed:
-        return const Color(0xFF34C759);
+        return const Color(0xFF22C55E);
     }
   }
 
   Color _ringColor() {
     switch (status) {
       case TimerStatus.completed:
-        return const Color(0xFF34C759);
+        return const Color(0xFF22C55E);
       case TimerStatus.paused:
         return accentColor.withValues(alpha: 0.55);
       case TimerStatus.idle:
+      case TimerStatus.getReady:
       case TimerStatus.running:
         return accentColor;
     }
@@ -63,10 +69,14 @@ class CrossFitTimerDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final secondary = const Color(0xFF8E8E93);
+    const secondary = Color(0xFF8E8E93);
+    final showPrep = status == TimerStatus.getReady && prepSeconds != null;
+    final timeText = showPrep ? '$prepSeconds' : format(remaining);
 
     return AnimatedScale(
-      scale: status == TimerStatus.completed ? 1.02 : 1.0,
+      scale: status == TimerStatus.completed
+          ? 1.02
+          : (showPrep ? 1.04 : 1.0),
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
       child: AnimatedOpacity(
@@ -95,16 +105,31 @@ class CrossFitTimerDisplay extends StatelessWidget {
               strokeWidth: 6,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Text(
-                  format(remaining),
-                  style: TextStyle(
-                    fontSize: 52,
-                    fontWeight: FontWeight.w200,
-                    height: 1.0,
-                    letterSpacing: -1.4,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                    color: _timeColor(context),
-                    decoration: TextDecoration.none,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 160),
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: ScaleTransition(
+                        scale: Tween<double>(begin: 0.92, end: 1).animate(
+                          animation,
+                        ),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Text(
+                    timeText,
+                    key: ValueKey(timeText),
+                    style: TextStyle(
+                      fontSize: showPrep ? 72 : 52,
+                      fontWeight: showPrep ? FontWeight.w300 : FontWeight.w200,
+                      height: 1.0,
+                      letterSpacing: showPrep ? -2 : -1.4,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      color: _timeColor(context),
+                      decoration: TextDecoration.none,
+                    ),
                   ),
                 ),
               ),

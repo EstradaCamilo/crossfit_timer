@@ -27,6 +27,7 @@ class TimerControls extends StatelessWidget {
       case TimerStatus.idle:
       case TimerStatus.completed:
         return CupertinoIcons.play_fill;
+      case TimerStatus.getReady:
       case TimerStatus.running:
         return CupertinoIcons.pause_fill;
       case TimerStatus.paused:
@@ -39,6 +40,7 @@ class TimerControls extends StatelessWidget {
       case TimerStatus.idle:
       case TimerStatus.completed:
         return strings.start;
+      case TimerStatus.getReady:
       case TimerStatus.running:
         return strings.pause;
       case TimerStatus.paused:

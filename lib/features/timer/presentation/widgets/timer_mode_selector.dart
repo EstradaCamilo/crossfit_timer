@@ -3,7 +3,7 @@ import 'package:flutter/cupertino.dart';
 import '../../domain/selectable_timer_types.dart';
 import '../../domain/timer_type.dart';
 
-/// Compact mode switcher for the main workout types.
+/// Mode picker: segmented control when idle; locked badge while active.
 class TimerModeSelector extends StatelessWidget {
   const TimerModeSelector({
     super.key,
@@ -22,75 +22,105 @@ class TimerModeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
     final muted = isDark ? const Color(0xFF8E8E93) : const Color(0xFF636366);
-    final chipBg = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFFFFFFF);
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: [
-          for (var i = 0; i < selectableTimerTypes.length; i++) ...[
-            if (i > 0) const SizedBox(width: 10),
-            _ModeChip(
-              label: selectableTimerTypes[i].shortLabel,
-              selected: selected == selectableTimerTypes[i],
-              enabled: enabled,
-              accentColor: accentColor,
-              mutedColor: muted,
-              background: chipBg,
-              onTap: () => onSelected(selectableTimerTypes[i]),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      child: enabled
+          ? KeyedSubtree(
+              key: const ValueKey('mode-picker'),
+              child: SizedBox(
+                width: double.infinity,
+                child: CupertinoSlidingSegmentedControl<TimerType>(
+                  groupValue: selected,
+                  thumbColor: accentColor,
+                  backgroundColor: isDark
+                      ? const Color(0xFF1C1C1E)
+                      : const Color(0xFFE5E5EA),
+                  padding: const EdgeInsets.all(3),
+                  children: {
+                    for (final type in selectableTimerTypes)
+                      type: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 8,
+                        ),
+                        child: Text(
+                          type.shortLabel,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.2,
+                            color: selected == type
+                                ? CupertinoColors.white
+                                : muted,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ),
+                  },
+                  onValueChanged: (value) {
+                    if (value != null) onSelected(value);
+                  },
+                ),
+              ),
+            )
+          : KeyedSubtree(
+              key: const ValueKey('mode-locked'),
+              child: _LockedModeBadge(
+                label: selected.label,
+                accentColor: accentColor,
+                mutedColor: muted,
+              ),
             ),
-          ],
-        ],
-      ),
     );
   }
 }
 
-class _ModeChip extends StatelessWidget {
-  const _ModeChip({
+class _LockedModeBadge extends StatelessWidget {
+  const _LockedModeBadge({
     required this.label,
-    required this.selected,
-    required this.enabled,
     required this.accentColor,
     required this.mutedColor,
-    required this.background,
-    required this.onTap,
   });
 
   final String label;
-  final bool selected;
-  final bool enabled;
   final Color accentColor;
   final Color mutedColor;
-  final Color background;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? accentColor.withValues(alpha: 0.14) : background,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected ? accentColor : mutedColor.withValues(alpha: 0.25),
-            width: 1,
-          ),
+          color: accentColor.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-            color: selected ? accentColor : mutedColor,
-            decoration: TextDecoration.none,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              CupertinoIcons.lock_fill,
+              size: 12,
+              color: accentColor.withValues(alpha: 0.85),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+                color: accentColor,
+                decoration: TextDecoration.none,
+              ),
+            ),
+          ],
         ),
       ),
     );

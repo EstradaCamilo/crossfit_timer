@@ -1,9 +1,8 @@
 /// Extensible workout timer modes.
 enum TimerType {
-  countdown,
+  forTime,
   amrap,
   emom,
-  forTime,
   tabata,
   intervals,
 }
@@ -11,21 +10,19 @@ enum TimerType {
 extension TimerTypeLabel on TimerType {
   String get label {
     switch (this) {
-      case TimerType.countdown:
-        return 'Countdown';
+      case TimerType.forTime:
+        return 'FOR TIME';
       case TimerType.amrap:
         return 'AMRAP';
       case TimerType.emom:
         return 'EMOM';
-      case TimerType.forTime:
-        return 'For Time';
       case TimerType.tabata:
-        return 'Tabata';
+        return 'TABATA';
       case TimerType.intervals:
-        return 'Intervals';
+        return 'INTERVALS';
     }
   }
 
-  /// Compact label for chips.
+  /// Compact label for segmented control.
   String get shortLabel => label;
 }
