@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 
 import '../../../../core/theme/app_colors.dart';
 
-/// Brand header outside the navigation bar so the title can breathe.
+/// Centered brand header with settings anchored to the trailing edge.
 class AppHeader extends StatelessWidget {
   const AppHeader({
     super.key,
@@ -17,22 +17,27 @@ class AppHeader extends StatelessWidget {
   final VoidCallback onSettings;
   final Color accentColor;
 
+  static const double _actionSize = 40;
+
   @override
   Widget build(BuildContext context) {
     final primary = AppColors.resolve(AppColors.textPrimary, context);
     final secondary = AppColors.resolve(AppColors.textSecondary, context);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 4, 0, 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(0, 4, 0, 18),
+      child: SizedBox(
+        height: 52,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // True visual center for title + handle.
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   title,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -45,6 +50,7 @@ class AppHeader extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   handle,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w400,
@@ -55,17 +61,24 @@ class AppHeader extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-          CupertinoButton(
-            padding: const EdgeInsets.only(left: 8, top: 2),
-            onPressed: onSettings,
-            child: Icon(
-              CupertinoIcons.gear,
-              color: accentColor,
-              size: 24,
+            Align(
+              alignment: Alignment.centerRight,
+              child: SizedBox(
+                width: _actionSize,
+                height: _actionSize,
+                child: CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: onSettings,
+                  child: Icon(
+                    CupertinoIcons.gear,
+                    color: accentColor,
+                    size: 22,
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

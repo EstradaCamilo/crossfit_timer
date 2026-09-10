@@ -10,12 +10,16 @@ import '../domain/timer_status.dart';
 import '../domain/timer_type.dart';
 
 /// Precise timer engine driven by wall-clock timestamps.
+///
+/// Audio plays [TimerSoundService.cueLeadIn] before each phase transition so
+/// the clip ends as the next interval begins (prep → work, work → rest, etc.).
 class TimerController extends ChangeNotifier {
   TimerController({
     TimerConfig? initialConfig,
-    this._sound = const TimerSoundService(),
+    TimerSoundService? sound,
     this._haptics = const HapticService(),
-  })  : _config = initialConfig ?? TimerConfig.defaultsFor(TimerType.forTime),
+  })  : _sound = sound ?? TimerSoundService(),
+        _config = initialConfig ?? TimerConfig.defaultsFor(TimerType.forTime),
         _remainingWhenPaused =
             (initialConfig ?? TimerConfig.defaultsFor(TimerType.forTime))
                 .duration;
@@ -31,10 +35,10 @@ class TimerController extends ChangeNotifier {
   Duration _remainingWhenPaused;
   Timer? _ticker;
   bool _completionSignaled = false;
-  int? _lastCountdownCueSecond;
   int _currentRound = 1;
   TimerPhase _phase = TimerPhase.work;
   bool _pausedDuringPrep = false;
+  bool _leadInPlayed = false;
 
   TimerConfig get config => _config;
   TimerStatus get status => _status;
@@ -47,7 +51,6 @@ class TimerController extends ChangeNotifier {
       _status == TimerStatus.getReady ||
       (_status == TimerStatus.paused && _pausedDuringPrep);
 
-  /// Displayed clock value (prep seconds or workout remaining).
   Duration get displayTime => remaining;
 
   Duration get remaining {
@@ -67,14 +70,12 @@ class TimerController extends ChangeNotifier {
     }
   }
 
-  /// Whole seconds left in the get-ready phase (5..1).
   int get prepSeconds {
     final s = remaining.inMilliseconds;
     if (s <= 0) return 0;
     return ((s + 999) ~/ 1000).clamp(0, prepDuration.inSeconds);
   }
 
-  /// 1.0 → full ring, 0.0 → empty for the active segment.
   double get progress {
     final totalMs = _segmentDuration.inMilliseconds;
     if (totalMs <= 0) return 0;
@@ -152,6 +153,7 @@ class TimerController extends ChangeNotifier {
     bool preserveIdleRemaining = false,
   }) {
     _stopTicker();
+    unawaited(_sound.stop());
     _config = config;
     _phase = TimerPhase.work;
     if (!preserveIdleRemaining || _status == TimerStatus.completed) {
@@ -162,13 +164,12 @@ class TimerController extends ChangeNotifier {
     _endAt = null;
     _status = TimerStatus.idle;
     _completionSignaled = false;
-    _lastCountdownCueSecond = null;
     _currentRound = 1;
     _pausedDuringPrep = false;
+    _leadInPlayed = false;
     notifyListeners();
   }
 
-  /// Starts the mandatory 5s get-ready countdown, then the workout.
   void start() {
     if (!canStart) return;
 
@@ -176,15 +177,15 @@ class TimerController extends ChangeNotifier {
     _currentRound = 1;
     _pausedDuringPrep = false;
     _completionSignaled = false;
-    _lastCountdownCueSecond = null;
+    _leadInPlayed = false;
 
     _remainingWhenPaused = prepDuration;
     _endAt = DateTime.now().add(prepDuration);
     _status = TimerStatus.getReady;
-    _lastCountdownCueSecond = prepDuration.inSeconds;
 
-    _sound.playCountdown();
-    unawaited(_haptics.countdown());
+    // If prep is shorter than the clip, start cue immediately.
+    _maybePlayLeadIn(prepDuration);
+
     _startTicker();
     notifyListeners();
   }
@@ -196,6 +197,7 @@ class TimerController extends ChangeNotifier {
     _endAt = null;
     _status = TimerStatus.paused;
     _stopTicker();
+    unawaited(_sound.stop());
     notifyListeners();
   }
 
@@ -227,31 +229,37 @@ class TimerController extends ChangeNotifier {
         _beginWorkout();
         return;
       }
-      _cuePrepSeconds(left);
+      _maybePlayLeadIn(left);
       notifyListeners();
       return;
     }
 
     if (_status != TimerStatus.running) return;
 
-    if (_config.type == TimerType.emom || _config.type == TimerType.tabata) {
-      final left = remaining;
-      if (left > Duration.zero) {
-        _cueFinalSeconds(left);
-        notifyListeners();
-        return;
+    final left = remaining;
+    if (left <= Duration.zero) {
+      if (_config.type == TimerType.emom || _config.type == TimerType.tabata) {
+        _advanceSegment();
+      } else {
+        _complete();
       }
-      _advanceSegment();
       return;
     }
 
-    final left = remaining;
-    if (left <= Duration.zero) {
-      _complete();
-      return;
-    }
-    _cueFinalSeconds(left);
+    // Lead-in before next phase / finish (EMOM, Tabata, AMRAP, For Time).
+    _maybePlayLeadIn(left);
     notifyListeners();
+  }
+
+  /// Plays the cue once when [left] enters the lead-in window.
+  void _maybePlayLeadIn(Duration left) {
+    if (_leadInPlayed) return;
+    final lead = _sound.cueLeadIn;
+    if (left > lead) return;
+
+    _leadInPlayed = true;
+    _sound.playCue();
+    unawaited(_haptics.countdown());
   }
 
   void _beginWorkout() {
@@ -261,13 +269,8 @@ class TimerController extends ChangeNotifier {
       _complete();
       return;
     }
-    _remainingWhenPaused = duration;
-    _endAt = DateTime.now().add(duration);
-    _status = TimerStatus.running;
-    _lastCountdownCueSecond = null;
-    _sound.playStart();
+    _beginSegment(duration);
     unawaited(_haptics.start());
-    if (_ticker == null) _startTicker();
     notifyListeners();
   }
 
@@ -279,7 +282,6 @@ class TimerController extends ChangeNotifier {
       }
       _currentRound += 1;
       _beginSegment(_config.duration);
-      _sound.playRoundChange();
       unawaited(_haptics.roundChange());
       notifyListeners();
       return;
@@ -289,7 +291,6 @@ class TimerController extends ChangeNotifier {
       if (_phase == TimerPhase.work) {
         _phase = TimerPhase.rest;
         _beginSegment(_config.restDuration);
-        _sound.playRoundChange();
         unawaited(_haptics.roundChange());
         notifyListeners();
         return;
@@ -302,7 +303,6 @@ class TimerController extends ChangeNotifier {
       _currentRound += 1;
       _phase = TimerPhase.work;
       _beginSegment(_config.duration);
-      _sound.playRoundChange();
       unawaited(_haptics.roundChange());
       notifyListeners();
       return;
@@ -314,31 +314,15 @@ class TimerController extends ChangeNotifier {
   void _beginSegment(Duration duration) {
     _remainingWhenPaused = duration;
     _endAt = DateTime.now().add(duration);
-    _lastCountdownCueSecond = null;
     _status = TimerStatus.running;
+    _leadInPlayed = false;
+
+    // Short intervals: start cue immediately so it still leads the next change.
+    if (duration <= _sound.cueLeadIn) {
+      _maybePlayLeadIn(duration);
+    }
+
     if (_ticker == null) _startTicker();
-  }
-
-  void _cuePrepSeconds(Duration left) {
-    final wholeSeconds = prepSeconds;
-    if (wholeSeconds >= 1 &&
-        wholeSeconds <= prepDuration.inSeconds &&
-        _lastCountdownCueSecond != wholeSeconds) {
-      _lastCountdownCueSecond = wholeSeconds;
-      _sound.playCountdown();
-      unawaited(_haptics.countdown());
-    }
-  }
-
-  void _cueFinalSeconds(Duration left) {
-    final wholeSeconds = left.inSeconds;
-    if (wholeSeconds >= 1 &&
-        wholeSeconds <= 3 &&
-        _lastCountdownCueSecond != wholeSeconds) {
-      _lastCountdownCueSecond = wholeSeconds;
-      _sound.playCountdown();
-      unawaited(_haptics.countdown());
-    }
   }
 
   void _complete() {
@@ -349,7 +333,7 @@ class TimerController extends ChangeNotifier {
     _remainingWhenPaused = Duration.zero;
     _pausedDuringPrep = false;
     _status = TimerStatus.completed;
-    _sound.playComplete();
+    // Lead-in already played near the end of the last segment — no second cue.
     unawaited(_haptics.complete());
     notifyListeners();
   }

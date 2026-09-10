@@ -10,6 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  # Short cue playback for start / countdown / complete.
+  audioplayers: ^6.5.1
 
 dev_dependencies:
   flutter_test:
@@ -18,3 +20,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: false
+  assets:
+    - assets/sounds/start-beeps.mp3

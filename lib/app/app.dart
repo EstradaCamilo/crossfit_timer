@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 
 import '../core/settings/app_settings.dart';
@@ -16,30 +18,31 @@ class CrossFitTimerApp extends StatefulWidget {
 
 class _CrossFitTimerAppState extends State<CrossFitTimerApp> {
   late final AppSettings _settings;
+  late final TimerSoundService _sound;
   late final TimerController _timerController;
 
   @override
   void initState() {
     super.initState();
     _settings = AppSettings();
+    _sound = TimerSoundService(enabled: _settings.soundEnabled);
+    unawaited(_sound.warmUp());
     _timerController = TimerController(
-      sound: TimerSoundService(enabled: _settings.soundEnabled),
+      sound: _sound,
       haptics: const HapticService(),
     );
     _settings.addListener(_syncServices);
   }
 
   void _syncServices() {
-    _timerController.updateServices(
-      sound: TimerSoundService(enabled: _settings.soundEnabled),
-      haptics: const HapticService(),
-    );
+    _sound.enabled = _settings.soundEnabled;
   }
 
   @override
   void dispose() {
     _settings.removeListener(_syncServices);
     _timerController.dispose();
+    _sound.dispose();
     _settings.dispose();
     super.dispose();
   }
@@ -54,8 +57,6 @@ class _CrossFitTimerAppState extends State<CrossFitTimerApp> {
           title: 'CrossFit Timer',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(accent),
-          // CupertinoApp picks dark via MediaQuery when brightness is dark
-          // if we also honor forced appearance via builder below.
           builder: (context, child) {
             final override = _settings.brightnessOverride;
             final media = MediaQuery.of(context);
